@@ -13,7 +13,6 @@ import regex
 import subprocess as sp
 from dulwich.repo import Repo
 import platform
-from flovis import Flovis
 
 
 def git_commit_info():
@@ -122,8 +121,8 @@ class GlobalVars:
         config.read('config.ci')
 
     # environ_or_none defined in helpers.py
-    bot_name = environ_or_none("SMOKEDETECTOR_NAME") or "SmokeDetector"
-    bot_repository = environ_or_none("SMOKEDETECTOR_REPO") or "//github.com/Charcoal-SE/SmokeDetector"
+    bot_name = environ_or_none("SMOKEDETECTOR_NAME") or "SmellDetector"
+    bot_repository = environ_or_none("SMOKEDETECTOR_REPO") or "//github.com/Undo1/SmellDetector"
     chatmessage_prefix = "[{}]({})".format(bot_name, bot_repository)
 
     site_id_dict = {}
@@ -169,7 +168,4 @@ class GlobalVars:
     except NoOptionError:
         flovis_host = None
 
-    if flovis_host is not None:
-        flovis = Flovis(flovis_host)
-    else:
-        flovis = None
+    flovis = None

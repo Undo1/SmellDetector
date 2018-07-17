@@ -3,7 +3,6 @@ import os
 # noinspection PyPep8Naming
 import pickle
 from datetime import datetime
-from metasmoke import Metasmoke
 import requests
 import json
 import time
@@ -129,11 +128,7 @@ def is_auto_ignored_post(postid_site_tuple):
 
 # noinspection PyUnusedLocal
 def is_code_privileged(site, user_id):
-    if GlobalVars.code_privileged_users is None:
-        Metasmoke.update_code_privileged_users_list()
-
-    # For now, disable the moderator override on code/blacklist changes
-    return (site, user_id) in GlobalVars.code_privileged_users
+    return False
 
 # methods to add/remove whitelisted/blacklisted users, ignored posts, ...
 

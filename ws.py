@@ -25,7 +25,6 @@ from utcdate import UtcDate
 from spamhandling import check_if_spam_json
 from globalvars import GlobalVars
 from datahandling import load_files, filter_auto_ignored_posts
-from metasmoke import Metasmoke
 from deletionwatcher import DeletionWatcher
 import json
 import time
@@ -95,48 +94,19 @@ filter_auto_ignored_posts()
 
 
 GlobalVars.s = "[ " + GlobalVars.chatmessage_prefix + " ] " \
-               "SmokeDetector started at [rev " +\
+               "SmellDetector started at [rev " +\
                GlobalVars.commit_with_author +\
                "](" + GlobalVars.bot_repository + "/commit/" +\
                GlobalVars.commit['id'] +\
                ") (running on " +\
                GlobalVars.location +\
                ")"
-GlobalVars.s_reverted = "[ " + GlobalVars.chatmessage_prefix + " ] " \
-                        "SmokeDetector started in [reverted mode](" + \
-                        "https://charcoal-se.org/smokey/SmokeDetector-Statuses#reverted-mode) " \
-                        "at [rev " + \
-                        GlobalVars.commit_with_author + \
-                        "](" + GlobalVars.bot_repository + "/commit/" + \
-                        GlobalVars.commit['id'] + \
-                        ") (running on " +\
-                        GlobalVars.location +\
-                        ")"
-GlobalVars.standby_message = "[ " + GlobalVars.chatmessage_prefix + " ] " \
-                             "SmokeDetector started in [standby mode](" + \
-                             "https://charcoal-se.org/smokey/SmokeDetector-Statuses#standby-mode) " + \
-                             "at [rev " +\
-                             GlobalVars.commit_with_author +\
-                             "](" + GlobalVars.bot_repository + "/commit/" +\
-                             GlobalVars.commit['id'] +\
-                             ") (running on " +\
-                             GlobalVars.location +\
-                             ")"
+GlobalVars.s_reverted = GlobalVars.s
+
 
 GlobalVars.standby_mode = "standby" in sys.argv
 
 chatcommunicate.init(username, password)
-Tasks.periodic(Metasmoke.send_status_ping, interval=60)
-Tasks.periodic(Metasmoke.check_last_pingtime, interval=30)
-
-if GlobalVars.standby_mode:
-    chatcommunicate.tell_rooms_with("debug", GlobalVars.standby_message)
-    Metasmoke.send_status_ping()
-
-    while GlobalVars.standby_mode:
-        time.sleep(3)
-
-    chatcommunicate.join_command_rooms()
 
 
 # noinspection PyProtectedMember
@@ -148,7 +118,6 @@ def check_socket_connections():
 
 # noinspection PyProtectedMember
 def restart_automatically():
-    Metasmoke.send_statistics()
     os._exit(5)
 
 
@@ -188,11 +157,6 @@ if "first_start" in sys.argv and GlobalVars.on_master:
 elif "first_start" in sys.argv and not GlobalVars.on_master:
     chatcommunicate.tell_rooms_with("debug", GlobalVars.s_reverted)
 
-Tasks.periodic(Metasmoke.send_statistics, interval=600)
-
-metasmoke_ws_t = Thread(name="metasmoke websocket", target=Metasmoke.init_websocket)
-metasmoke_ws_t.start()
-
 while True:
     try:
         a = ws.recv()
@@ -200,17 +164,19 @@ while True:
             action = json.loads(a)["action"]
             if action == "hb":
                 ws.send("hb")
-            if action == "155-questions-active":
-                if GlobalVars.flovis is not None:
-                    data = json.loads(json.loads(a)['data'])
-                    GlobalVars.flovis.stage('received', data['siteBaseHostAddress'], data['id'], json.loads(a))
 
-                is_spam, reason, why = check_if_spam_json(a)
+            try:
+                site = json.loads(json.loads(a)["data"])["apiSiteParameter"]
+                print(site)
+                if action == "155-questions-active" and site == "stackoverflow":
+                    is_spam, reason, why = check_if_spam_json(a)
 
-                t = Thread(name="bodyfetcher post enqueing",
-                           target=GlobalVars.bodyfetcher.add_to_queue,
-                           args=(a, True if is_spam else None))
-                t.start()
+                    t = Thread(name="bodyfetcher post enqueing",
+                               target=GlobalVars.bodyfetcher.add_to_queue,
+                               args=(a, True if is_spam else None))
+                    t.start()
+            except:
+                pass
 
     except Exception as e:
         exc_type, exc_obj, exc_tb = sys.exc_info()
